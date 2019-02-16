@@ -1,0 +1,223 @@
+<!-- Horizontal Form -->
+ <div class="box box-info">
+      <div class="box-header with-border">
+        <h3 class="box-title">添加菜单</h3>
+      </div>
+      <!-- /.box-header -->
+      <!-- form start -->
+      <form class="form-horizontal">
+        <div class="box-body">
+          <div class="form-group">
+            <label for="nameId" class="col-sm-2 control-label">类型</label>
+            <div class="col-sm-10 typeRadio">
+              	<label class="radio-inline">
+				<input type="radio" name="typeId" value="1" checked> 菜单 </label>
+				<label class="radio-inline">
+				<input type="radio" name="typeId" value="2"> 按钮 </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="nameId" class="col-sm-2 control-label">菜单名称</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control"  id="nameId" placeholder="名称">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="parentId" class="col-sm-2 control-label">上级菜单</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control load-sys-menu" readonly="readonly" id="parentId" placeholder="上级菜单">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="urlId" class="col-sm-2 control-label">菜单URL</label>
+            <div class="col-sm-10">
+              <input type="text" class="form-control"  id="urlId" placeholder="url">
+            </div>
+          </div>
+          <div class="form-group">
+			<label for="permissionId" class="col-sm-2 control-label">授权标识：</label>
+			<div class="col-sm-10">
+				<input type="text" id="permissionId"
+				       placeholder="多个用逗号分隔，如：user:list,user:create"
+					   class="form-control">
+			</div>
+		  </div>
+		  <div class="form-group">
+				<label for="sortId" class="col-sm-2 control-label">排序号：</label>
+				<div class="col-sm-10">
+					<input type="text" id="sortId" placeholder="排序号"
+						class="form-control">
+				</div>
+		 </div>
+        </div>
+        <!-- /.box-body -->
+        <div class="box-footer">
+          <button type="button" class="btn btn-default btn-cancel">Cancel</button>
+          <button type="button" class="btn btn-info pull-right btn-save">Save</button>
+        </div>
+        <!-- /.box-footer -->
+      </form>
+      <!-- zTree 对应的div -->
+      <div class="layui-layer layui-layer-page layui-layer-molv layer-anim" id="menuLayer" type="page" times="2" showtime="0" contype="object"
+		style="z-index:59891016; width: 300px; height: 450px; top: 100px; left: 500px; display:none">
+		<div class="layui-layer-title" style="cursor: move;">选择菜单</div>
+		<div class="layui-layer-content" style="height: 358px;">
+			<div style="padding: 10px;" class="layui-layer-wrap">
+				<ul id="menuTree" class="ztree"></ul>    <!-- 动态加载树 -->
+			</div>
+		</div>
+		<span class="layui-layer-setwin"> <a class="layui-layer-ico layui-layer-close layui-layer-close1 btn-cancel" ></a></span>
+		<div class="layui-layer-btn layui-layer-btn-">
+			<a class="layui-layer-btn0 btn-confirm">确定</a>
+			<a class="layui-layer-btn1 btn-cancel">取消</a>
+	     </div>
+      </div>
+      
+  </div>
+  <script type="text/javascript" src="bower_components/ztree/jquery.ztree.all.min.js"></script>
+  <script type="text/javascript" src="bower_components/layer/layer.js">
+  </script>
+ <script type="text/javascript">
+  var zTree; //zTree是第三方扩展的一个Jquery插件
+  //初始化zTree时会用到
+  var setting = {
+  	data : {
+  		simpleData : {
+  			enable : true,//true表示是否可以选择
+  			idKey : "id",  //节点数据中保存唯一标识的属性名称
+  			pIdKey : "parentId",  //节点数据中保存其父节点唯一标识的属性名称
+  			rootPId : null  //根节点id
+  		}//json 格式javascript对象
+  	}
+  }//json 格式的javascript对象
+
+  $(function(){
+	  $("#mainContentId").on("click",".load-sys-menu",doLoadZTreeNodes)
+	  //取消  确认按钮注册
+	  $("#menuLayer").on("click",".btn-cancel",doHideZTree)
+	  $("#menuLayer").on("click",".btn-confirm",doSetSelectNode)
+	  //cancel  save按钮注册
+	  $(".box-footer").on("click",".btn-cancel",doCancel)
+	  $(".box-footer").on("click",".btn-save",doSaveOrUpdate)
+
+   	var rowData=$("#mainContentId").data("rowData");
+	  if(rowData){doInitEditFormData(rowData)};
+	  
+  })
+  	
+  function doInitEditFormData(data){
+	//  alert(data);
+	console.log("data",data);
+	  $("form input[value='"+data.type+"']").prop("checked",true);
+	  $("#nameId").val(data.name);
+	  $("#urlId").val(data.url);
+	  $("#sortId").val(data.sort);
+	  $("#permissionId").val(data.permission);
+	  $("#typeId").val(data.type);
+	  $("#parentId").val(data.parentName);//呈现名字
+	  $("#parentId").data("parentId",data.parentId);//保存到数据库
+	  
+  }
+  
+  
+  
+  //设置选中节点
+ function doSetSelectNode(){
+	  console.log("zTree",zTree);
+	  var nodes=zTree.getSelectedNodes();
+	  console.log("nodes",nodes);
+	  if(nodes.length==0){
+		  alert("请选选择");
+		  return;
+	  }
+	  //页面呈现数据
+	  $("#parentId").val(nodes[0].name);
+	  //将选择的写入数据库
+	  $("#parentId").data("parentId",nodes[0].id);
+	  doHideZTree();
+	  
+  }
+  //隐藏zTree
+  function doHideZTree(){
+	  $("#menuLayer").css("display","none");
+	  
+  }
+  
+  function doLoadZTreeNodes(){
+	  
+	  //2发送异步请求加载数据
+	  var url="menu/doFindZTreeMenuNodes.do";
+	  $.getJSON(url,function(result){
+		  if(result.state==1){
+			  //$代表jQuery对象 fn等价于prototype（类似this）
+			  //简单记住，固定写法（第三方zTree插件定义）
+			  zTree=$.fn.zTree.init(
+				$("#menuTree"),//显示树的对象
+				setting,//树的基本配置
+				result.data);//nodes数据
+			//1 显示zTree的div对象 没数据的时候不弹出div
+			  $("#menuLayer").css("display","block");
+			 
+		  }else{
+			  alert(result.message);
+		  }
+	  })
+  }
+  //Cancel 按钮事件处理函数定义
+  function doCancel(){
+	  
+	  $("#mainContentId").load("menu/doMenuListUI.do",function(){
+		  $("#mainContentId").removeData();
+		  $("#parentId").removeData();
+	  });
+  }
+
+  //save 按钮事件处理函数定义
+  function doSaveOrUpdate(){
+	 
+	  //1.获取表单数据
+	  var params=doGetEditFormData();
+	  var rowData=$("#mainContentId").data("rowData");
+	  if(rowData){//假如是修改，参数中追加id值
+		  params.id=rowData.id;
+	  }
+	  console.log("params",params);
+	  //2.定义url(更新 修改页面)
+	  var Inserturl="menu/doInsertObject.do";
+	  var updateurl="menu/doUpdateObject.do";
+	  var url=rowData?updateurl:Inserturl;
+	  //3.异步提交数据
+	  $.post(url,params,function(result){
+		  if(result.state==1){
+			  alert(result.message);
+			  doCancel();
+		  }else{
+			  alert(result.message);
+		  }
+	  });
+  }
+	//获取表单数据
+  function doGetEditFormData(){
+	  var params={
+	    type:$("form input[name='typeId']:checked").val(),
+		name:$("#nameId").val(),
+		url:$("#urlId").val(),
+		sort:$("#sortId").val(),
+		permission:$("#permissionId").val(),
+		parentId:$("#parentId").data("parentId")
+	  };
+	 // alert(params);
+	  return params;
+  }
+
+  
+ </script>
+    
+    
+    
+    
+    
+    
+    
+    
+    
